@@ -17,7 +17,15 @@ const SignUpBodySchema = z.object({
   password: z.string().min(8),
 });
 
-type UserSchema = z.infer<typeof SignUpBodySchema>;
+const SignInBodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+type SignInResponse = z.infer<typeof SignInBodySchema>;
+
+type SignUpResponse = z.infer<typeof SignUpBodySchema>;
+
 interface env {
   DATABASE_URL: string;
 }
@@ -31,7 +39,7 @@ app.post("/api/v1/user/signup", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
 
-  const user: UserSchema = SignUpBodySchema.parse(await c.req.json());
+  const user: SignUpResponse = SignUpBodySchema.parse(await c.req.json());
   try {
     const res = await prisma.user.create({
       data: {
@@ -52,7 +60,16 @@ app.post("/api/v1/user/signup", async (c) => {
   console.log("User registered:", user);
 });
 
-app.post("/api/v1/user/signin", (c) => {
+app.post("/api/v1/user/signin", async (c) => {
+  const body: SignInResponse = SignInBodySchema.parse(await c.req.json());
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env?.DATABASE_URL,
+  }).$extends(withAccelerate());
+
+  const res = await prisma.user.findUnique({})
+  // edit from here 
+
+  
   return c.json({
     message: "User logged in successfully!",
     token: "your_token",

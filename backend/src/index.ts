@@ -1,40 +1,55 @@
 import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
-import {z} from "zod";
-import { useTransition } from "hono/jsx";
+import { z } from "zod";
+import { decode, sign, verify } from "hono/jwt";
 
 const app = new Hono<{
-	Bindings: {
-		DATABASE_URL: string
-	}
+  Bindings: {
+    DATABASE_URL: string;
+    SECRETKEY: string;
+  };
 }>();
 
 const SignUpBodySchema = z.object({
   name: z.string().optional(),
   email: z.string().email(),
-  password: z.string().min(8)
-})
+  password: z.string().min(8),
+});
 
 type UserSchema = z.infer<typeof SignUpBodySchema>;
 interface env {
   DATABASE_URL: string;
 }
 
-
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
 
 app.post("/api/v1/user/signup", async (c) => {
-  
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
-  
-  const user: UserSchema = SignUpBodySchema.parse( await c.req.json());
+
+  const user: UserSchema = SignUpBodySchema.parse(await c.req.json());
+  try {
+    const res = await prisma.user.create({
+      data: {
+        name: user.name,
+        email: user.email,
+        password: user.password,
+      },
+    });
+    console.log("User created:", res);
+    const token = await sign({ userId: res.id }, c.env?.SECRETKEY);
+    return c.json({
+      message: "User registered successfully!",
+      token,
+    });
+  } catch (error) {
+    console.error("Error validating input:", error);
+  }
   console.log("User registered:", user);
-  return c.text("User registered successfully!");
 });
 
 app.post("/api/v1/user/signin", (c) => {

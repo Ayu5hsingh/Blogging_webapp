@@ -4,12 +4,19 @@ import { withAccelerate } from "@prisma/extension-accelerate";
 import { z } from "zod";
 import { decode, sign, verify } from "hono/jwt";
 
+// importing middleware
+import { messagesMiddleware, blogMiddleware } from "./middleware";
+import { extractUserId } from "./middleware";
+
 const app = new Hono<{
   Bindings: {
     DATABASE_URL: string;
     SECRETKEY: string;
   };
 }>();
+
+app.use('*', extractUserId);
+
 
 const SignUpBodySchema = z.object({
   name: z.string().optional(),

@@ -26,6 +26,8 @@ type SignInResponse = z.infer<typeof SignInBodySchema>;
 
 type SignUpResponse = z.infer<typeof SignUpBodySchema>;
 
+type signinResponse = (SignUpResponse & { id: string }) | null;
+
 interface env {
   DATABASE_URL: string;
 }
@@ -66,15 +68,25 @@ app.post("/api/v1/user/signin", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
 
-  const res = await prisma.user.findUnique({})
-  // edit from here 
+  const user = await prisma.user.findUnique({
+    where: {
+      email: body.email,
+      password: body.password,
+    },
+  });
 
-  
+  if (!user) {
+    c.status(403);
+    return c.json({ error: "user not found" });
+  }
+
+  const jwt = await sign({ id: user.id }, c.env.SECRETKEY);
   return c.json({
+    jwt,
     message: "User logged in successfully!",
-    token: "your_token",
   });
 });
+
 
 app.post("/api/v1/blog", (c) => {
   return c.json({ message: "Blog created successfully!", id: "your_id" });

@@ -8,15 +8,19 @@ import { decode, sign, verify } from "hono/jwt";
 import { messagesMiddleware, blogMiddleware } from "./middleware";
 import { extractUserId } from "./middleware";
 
+type Variables = {
+  userId: string;
+};
+
 const app = new Hono<{
+  Variables: Variables;
   Bindings: {
     DATABASE_URL: string;
     SECRETKEY: string;
   };
 }>();
 
-app.use('*', extractUserId);
-
+app.use("/api/v1/blog/*", extractUserId);
 
 const SignUpBodySchema = z.object({
   name: z.string().optional(),
@@ -94,9 +98,10 @@ app.post("/api/v1/user/signin", async (c) => {
   });
 });
 
-
 app.post("/api/v1/blog", (c) => {
-  return c.json({ message: "Blog created successfully!", id: "your_id" });
+  const userId = c.get("userId");
+  console.log(userId);
+  return c.json({ message: "Blog created successfully!", id: userId });
 });
 
 app.put("/api/v1/blog/:id", (c) => {

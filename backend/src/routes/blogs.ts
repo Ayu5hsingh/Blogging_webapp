@@ -14,7 +14,7 @@ const blogSchema = z.object({
   content: z.string().min(10),
 });
 
-const blogUpdateSchema = blogSchema.partial().extend({id: z.string()});
+const blogUpdateSchema = blogSchema.partial().extend({ id: z.string() });
 
 type blogResponse = z.infer<typeof blogSchema>;
 type blogUpdate = z.infer<typeof blogUpdateSchema>;
@@ -60,23 +60,44 @@ blogRouter.put("/", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
   const result = blogUpdateSchema.safeParse(await c.req.json());
-  if (!result.success){
+  if (!result.success) {
     return c.json({
       error: "Invalid Input validation failed",
     });
   }
   const userId = c.get("userId");
-  const {title, content, id} = result.data
+  const { title, content, id }: blogUpdate = result.data;
   const response = await prisma.post.update({
-    where: { 
-      id: id, 
-      authorId: userId
+    where: {
+      id: id,
+      authorId: userId,
     },
     data: { title, content },
-  })
+  });
   return c.json(response);
 });
 
-blogRouter.put("/:id", (c) => {
-  return c.json({ message: "Blog updated successfully!" });
+blogRouter.put("/:id", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env?.DATABASE_URL,
+  }).$extends(withAccelerate());
+
+  const id = c.req.param("id");
+  const post = await prisma.post.findUnique({
+    where: {
+      id,
+    },
+  });
+  console.log(post);
+  return c.json(post);
 });
+
+blogRouter.get('/bulk', async (c) => {
+	const prisma = new PrismaClient({
+		datasourceUrl: c.env?.DATABASE_URL	,
+	}).$extends(withAccelerate());
+	
+	const posts = await prisma.post.findMany({});
+
+	return c.json(posts);
+})

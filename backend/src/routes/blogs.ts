@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client/edge'
+import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import { z } from "zod";
-import { extractUserId } from '../middleware';
+import { extractUserId } from "../middleware";
 
 type Variables = {
   userId: string;
@@ -14,7 +14,10 @@ const blogSchema = z.object({
   content: z.string().min(10),
 });
 
-type blogResponse = z.infer<typeof blogSchema>
+const blogUpdateSchema = blogSchema.partial().extend({id: z.string()});
+
+type blogResponse = z.infer<typeof blogSchema>;
+type blogUpdate = z.infer<typeof blogUpdateSchema>;
 
 export const blogRouter = new Hono<{
   Variables: Variables;
@@ -24,7 +27,7 @@ export const blogRouter = new Hono<{
   };
 }>();
 
-blogRouter.use(extractUserId)
+blogRouter.use(extractUserId);
 
 blogRouter.post("/", async (c) => {
   const prisma = new PrismaClient({
@@ -34,22 +37,44 @@ blogRouter.post("/", async (c) => {
   const userId = c.get("userId");
   console.log(userId);
 
-  const body = await c.req.json()
-  const result  = blogSchema.safeParse(body)
+  const body = await c.req.json();
+  const result = blogSchema.safeParse(body);
   if (!result.success) {
     return c.json({
-        error: "Invaid Input validation failed"
-      });
-    }
-  const {title, content}: blogResponse = result.data;
+      error: "Invaid Input validation failed",
+    });
+  }
+  const { title, content }: blogResponse = result.data;
   const response = await prisma.post.create({
     data: {
       title,
       content,
-      authorId: userId 
+      authorId: userId,
     },
-  })
+  });
   return c.json(userId);
+});
+
+blogRouter.put("/", async (c) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env?.DATABASE_URL,
+  }).$extends(withAccelerate());
+  const result = blogUpdateSchema.safeParse(await c.req.json());
+  if (!result.success){
+    return c.json({
+      error: "Invalid Input validation failed",
+    });
+  }
+  const userId = c.get("userId");
+  const {title, content, id} = result.data
+  const response = await prisma.post.update({
+    where: { 
+      id: id, 
+      authorId: userId
+    },
+    data: { title, content },
+  })
+  return c.json(response);
 });
 
 blogRouter.put("/:id", (c) => {

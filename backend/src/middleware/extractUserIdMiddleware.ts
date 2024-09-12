@@ -15,7 +15,7 @@ const extractUserId: MiddlewareHandler = async (c, next) => {
       c.status(401);
       return c.json({ error: "unauthorized" });
     }
-    const userId = payload.id;
+    const userId = payload.userId;
     c.set("userId", userId);
     await next();
   } catch (error) {

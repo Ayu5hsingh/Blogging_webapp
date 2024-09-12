@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client/edge'
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
@@ -22,7 +22,7 @@ const SignInBodySchema = z.object({
   password: z.string().min(8),
 });
 
-type SignInResponse = z.infer<typeof SignInBodySchema>;
+type SignInResponse = z.infer<typeof SignInBodySchema>
 
 type SignUpResponse = z.infer<typeof SignUpBodySchema>;
 
